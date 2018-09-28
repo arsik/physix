@@ -42,29 +42,31 @@ class Scene {
   }
 
   initPhysix() {
+    // this.world = new CANNON.World();
+    // this.world.gravity.set(0, -40, 0);
+    // this.world.broadphase = new CANNON.NaiveBroadphase();
+    // this.world.solver.iterations = 1;
     this.world = new CANNON.World();
-    this.world.gravity.set(0, -40, 0);
     this.world.broadphase = new CANNON.NaiveBroadphase();
-    this.world.solver.iterations = 1;
+    this.world.gravity.set(0, -40, 0);
+    this.world.solver.tolerance = 0.001;
 
     // cube
-    const textShape = new CANNON.Box(new CANNON.Vec3(1, 1, 1));
+    const textShape = new CANNON.Box(new CANNON.Vec3(0.5, 0.2, 0.1));
     this.physix.textMesh = new CANNON.Body({
       mass: 1,
       position: new CANNON.Vec3(1, 10, 1),
       shape: textShape
     });
-    // this.physix.textMesh.position.set(0, 10, 0);
     this.world.addBody(this.physix.textMesh);
 
     // plane
-    const planeShape = new CANNON.Plane(new CANNON.Vec3(1, 1, 1));
+    const planeShape = new CANNON.Plane();
     this.physix.plane = new CANNON.Body({
       mass: 0,
       shape: planeShape
     });
-    const rot = new CANNON.Vec3(1, 0, 0);
-    this.physix.plane.quaternion.setFromAxisAngle(rot, -(Math.PI / 2));
+    this.physix.plane.quaternion.setFromAxisAngle(new CANNON.Vec3(1, 0, 0), -Math.PI / 2);
     this.world.addBody(this.physix.plane);
   }
 
@@ -101,7 +103,7 @@ class Scene {
 
     loader.load( 'assets/helvetiker_bold.json', (font) => {
 
-      const textGeometry = new THREE.TextGeometry( 'A', {
+      const textGeometry = new THREE.TextGeometry( 'O', {
         font: font,
         size: 80,
         height: 1,
