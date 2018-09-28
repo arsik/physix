@@ -13,15 +13,17 @@ class Scene {
 
     this.objects = {
       plane: null,
-      cubeMesh: null
+      textMesh: null
     };
     this.physix = {
       plane: null,
-      cubeMesh: null
+      textMesh: null
     };
 
     this.world = null;
     this.timeStep = 1 / 60;
+
+    this.initialized = false;
 
   }
 
@@ -43,33 +45,34 @@ class Scene {
     this.world = new CANNON.World();
     this.world.gravity.set(0, -40, 0);
     this.world.broadphase = new CANNON.NaiveBroadphase();
-    this.world.solver.iterations = 10;
+    this.world.solver.iterations = 1;
 
     // cube
-    const cubeShape = new CANNON.Box(new CANNON.Vec3(1, 1, 1));
-    this.physix.cubeMesh = new CANNON.Body({
-      mass: 1
+    const textShape = new CANNON.Box(new CANNON.Vec3(1, 1, 1));
+    this.physix.textMesh = new CANNON.Body({
+      mass: 1,
+      position: new CANNON.Vec3(1, 10, 1),
+      shape: textShape
     });
-    this.physix.cubeMesh.position.set(0, 10, 0);
-    this.physix.cubeMesh.addShape(cubeShape);
-    this.world.addBody(this.physix.cubeMesh);
+    // this.physix.textMesh.position.set(0, 10, 0);
+    this.world.addBody(this.physix.textMesh);
 
     // plane
-    const planeShape = new CANNON.Box(new CANNON.Vec3(1, 1, 0.1));
+    const planeShape = new CANNON.Plane(new CANNON.Vec3(1, 1, 1));
     this.physix.plane = new CANNON.Body({
-      mass: 0
+      mass: 0,
+      shape: planeShape
     });
     const rot = new CANNON.Vec3(1, 0, 0);
     this.physix.plane.quaternion.setFromAxisAngle(rot, -(Math.PI / 2));
-    this.physix.plane.addShape(planeShape);
     this.world.addBody(this.physix.plane);
   }
 
   updatePhysix() {
     this.world.step(this.timeStep);
 
-    this.objects.cubeMesh.position.copy(this.physix.cubeMesh.position);
-    this.objects.cubeMesh.quaternion.copy(this.physix.cubeMesh.quaternion);
+    this.objects.textMesh.position.copy(this.physix.textMesh.position);
+    this.objects.textMesh.quaternion.copy(this.physix.textMesh.quaternion);
 
     this.objects.plane.position.copy(this.physix.plane.position);
     this.objects.plane.quaternion.copy(this.physix.plane.quaternion);
@@ -89,18 +92,46 @@ class Scene {
     this.scene.add(this.objects.plane);
     // this.objects.plane.rotateX(-Math.PI / 2);
 
-    const cubeGeometry = new THREE.BoxGeometry(2, 2, 2);
-    const cubeMaterial = new THREE.MeshBasicMaterial({ color: 0xff0000, wireframe: true });
-    this.objects.cubeMesh = new THREE.Mesh(cubeGeometry, cubeMaterial);
-    this.scene.add(this.objects.cubeMesh);
+    // const cubeGeometry = new THREE.BoxGeometry(2, 2, 2);
+    // const cubeMaterial = new THREE.MeshBasicMaterial({ color: 0xff0000, wireframe: true });
+    // this.objects.cubeMesh = new THREE.Mesh(cubeGeometry, cubeMaterial);
+    // this.scene.add(this.objects.cubeMesh);
+
+    const loader = new THREE.FontLoader();
+
+    loader.load( 'assets/helvetiker_bold.json', (font) => {
+
+      const textGeometry = new THREE.TextGeometry( 'A', {
+        font: font,
+        size: 80,
+        height: 1,
+        curveSegments: 20,
+        bevelEnabled: true,
+        bevelThickness: 5,
+        bevelSize: 1,
+        bevelSegments: 5
+      } );
+      const textMaterial = new THREE.MeshBasicMaterial({ color: 0xff0000, wireframe: false, side: THREE.DoubleSide });
+      this.objects.textMesh = new THREE.Mesh(textGeometry, textMaterial);
+      this.objects.textMesh.scale.set(0.025, 0.025, 0.025);
+      this.scene.add(this.objects.textMesh);
+
+      this.initPhysix();
+
+      this.initialized = true;
+
+    } );
 
     this.settingCamera();
     this.addGui();
-    this.initPhysix();
 
     const animate = () => {
       requestAnimationFrame(animate);
-      this.updatePhysix();
+
+      if (this.initialized) {
+        this.updatePhysix();
+      }
+
       this.renderer.render( this.scene, this.camera );
     };
     animate();
