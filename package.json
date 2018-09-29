@@ -29,6 +29,7 @@
     "cannon": "^0.6.2",
     "dat.gui": "^0.7.2",
     "lodash": "^4.17.10",
+    "stats-js": "^1.0.0-alpha1",
     "three": "^0.96.0",
     "three-orbit-controls": "^82.1.0"
   }

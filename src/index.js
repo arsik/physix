@@ -1,6 +1,7 @@
 // import _ from 'lodash';
 import * as THREE from 'three';
 import * as dat from 'dat.gui';
+import Stats from 'stats-js';
 import CANNON from 'cannon';
 import './cannonDebug';
 
@@ -8,14 +9,14 @@ class Scene {
 
   constructor() {
 
-    // const cannonDebugRenderer = require('./cannonDebug.js')(THREE);
-
     this.scene = new THREE.Scene();
     this.camera = new THREE.PerspectiveCamera( 75, window.innerWidth / window.innerHeight, 0.1, 100 );
     this.renderer = new THREE.WebGLRenderer({ alpha: false, antialias: true });
     this.renderer.shadowMap.enabled = true;
     this.renderer.shadowMap.type = THREE.BasicShadowMap;
     this.cannonDebugRenderer = null;
+
+    this.stats = null;
 
     this.objects = {
       plane: null,
@@ -48,6 +49,15 @@ class Scene {
     gui.add(this.camera.position, 'x', -10, 10).listen();
     gui.add(this.camera.position, 'y', -10, 10).listen();
     gui.add(this.camera.position, 'z', -10, 10).listen();
+
+    this.stats = new Stats();
+    this.stats.setMode(0);
+
+    this.stats.domElement.style.position = 'absolute';
+    this.stats.domElement.style.left = '0px';
+    this.stats.domElement.style.top = '0px';
+
+    document.body.appendChild(this.stats.domElement);
   }
 
   addLight() {
@@ -107,14 +117,31 @@ class Scene {
     this.objects.textMeshes.push(textMesh);
 
     const textShape = new CANNON.Box(new CANNON.Vec3(1, 1, 0.1));
-    const textPhysixMesh = new CANNON.Body({
+    const textPhysixBody = new CANNON.Body({
       mass: 1,
       position: textMesh.position,
       shape: textShape
     });
-    this.world.addBody(textPhysixMesh);
-    // textPhysixMesh.quaternion.setFromAxisAngle(new CANNON.Vec3(1, 0, 0), -Math.PI / 2);
-    this.physix.textMeshes.push(textPhysixMesh);
+    // textPhysixBody.velocity.set(0, 0, -5);
+    this.world.addBody(textPhysixBody);
+    // textPhysixBody.quaternion.setFromAxisAngle(new CANNON.Vec3(1, 0, 0), -Math.PI / 2);
+    this.physix.textMeshes.push(textPhysixBody);
+
+    textPhysixBody.addEventListener('collide', function (e) {
+      // console.log('The sphere just collided with the ground!');
+      // console.log('Collided with body:', e.body);
+      // console.log('Contact between bodies:', e.contact);
+
+      if (textPhysixBody.onceVelocity === undefined) {
+        textPhysixBody.onceVelocity = true;
+        textPhysixBody.velocity.set(
+          -10 + Math.random() * 20,
+          5 + Math.random() * 10,
+          -10 + Math.random() * 20
+        );
+      }
+
+    });
   }
 
   rotatePlane() {
@@ -140,7 +167,6 @@ class Scene {
         this.rotatePlane();
         return;
       }
-      console.log(e);
       this.addTextMesh(this.textFont, e.key,
         -5 + Math.random() * 10,
         10 + Math.random() * 10,
@@ -181,6 +207,8 @@ class Scene {
     const animate = () => {
       requestAnimationFrame(animate);
 
+      this.stats.begin();
+
       if (this.initialized) {
 
         if (this.planeAnimation.update) {
@@ -198,6 +226,8 @@ class Scene {
         this.updatePhysix();
         this.cannonDebugRenderer.update();
       }
+
+      this.stats.end();
 
       this.renderer.render( this.scene, this.camera );
     };
