@@ -3,7 +3,9 @@ import * as THREE from 'three';
 import * as dat from 'dat.gui';
 import Stats from 'stats-js';
 import CANNON from 'cannon';
+import { TweenMax } from 'gsap/TweenMax';
 import './cannonDebug';
+import { TextMesh } from './textMesh';
 
 class Scene {
 
@@ -29,7 +31,7 @@ class Scene {
 
     this.planeAnimation = {
       update: false,
-      step: 0.0,
+      speed: 1,
       from: -Math.PI / 2,
       to: 0.0
     };
@@ -96,57 +98,35 @@ class Scene {
     this.world.addBody(this.physix.plane);
   }
 
-  addTextMesh(font, char, x, y, z) {
-    const textGeometry = new THREE.TextGeometry( char, {
-      font: font,
-      size: 2,
-      height: 0.1,
-      curveSegments: 10,
-      // bevelEnabled: true,
-      // bevelThickness: 0.1,
-      // bevelSize: 0.05,
-      // bevelSegments: 10
-    } );
-    // textGeometry.translate(-0.5, -0.5, 0);
-    textGeometry.center(); // fix bound box
-    const textMaterial = new THREE.MeshLambertMaterial({ color: 0xff0000, wireframe: false, side: THREE.DoubleSide });
-    const textMesh = new THREE.Mesh(textGeometry, textMaterial);
-    // textMesh.scale.set(1, 1, 1);
-    textMesh.position.set(x, y, z);
+  addTextMesh(font, char, position) {
+
+    const text = new TextMesh(char, font, position);
+    const textMesh = text.getMesh();
+    const textPhysix = text.getPhysix();
+
     this.scene.add(textMesh);
     this.objects.textMeshes.push(textMesh);
 
-    const textShape = new CANNON.Box(new CANNON.Vec3(1, 1, 0.1));
-    const textPhysixBody = new CANNON.Body({
-      mass: 1,
-      position: textMesh.position,
-      shape: textShape
-    });
-    // textPhysixBody.velocity.set(0, 0, -5);
-    this.world.addBody(textPhysixBody);
-    // textPhysixBody.quaternion.setFromAxisAngle(new CANNON.Vec3(1, 0, 0), -Math.PI / 2);
-    this.physix.textMeshes.push(textPhysixBody);
-
-    textPhysixBody.addEventListener('collide', function (e) {
-      // console.log('The sphere just collided with the ground!');
-      // console.log('Collided with body:', e.body);
-      // console.log('Contact between bodies:', e.contact);
-
-      if (textPhysixBody.onceVelocity === undefined) {
-        textPhysixBody.onceVelocity = true;
-        textPhysixBody.velocity.set(
-          -10 + Math.random() * 20,
-          5 + Math.random() * 10,
-          -10 + Math.random() * 20
-        );
-      }
-
-    });
+    this.world.addBody(textPhysix);
+    this.physix.textMeshes.push(textPhysix);
   }
 
   rotatePlane() {
     this.planeAnimation.update = true;
     this.isEnabledEvents = false;
+
+    TweenMax.to(this.planeAnimation, this.planeAnimation.speed, {
+      from: this.planeAnimation.to, yoyo: true, repeat: 1, onComplete: () => {
+        this.planeAnimation.update = false;
+        this.isEnabledEvents = true;
+      },
+      // ease: Expo.easeInOut
+    });
+
+    // for (let i = 0; i < this.physix.textMeshes.length; i++) {
+    //   this.physix.textMeshes[i].velocity.set(10, 10, 10);
+    // }
+
   }
 
   updatePhysix() {
@@ -167,10 +147,7 @@ class Scene {
         this.rotatePlane();
         return;
       }
-      this.addTextMesh(this.textFont, e.key,
-        -5 + Math.random() * 10,
-        10 + Math.random() * 10,
-        -5 + Math.random() * 10);
+      this.addTextMesh(this.textFont, e.key, new THREE.Vector3(-5 + Math.random() * 10, 10 + Math.random() * 10, -5 + Math.random() * 10));
     };
   }
 
@@ -212,19 +189,11 @@ class Scene {
       if (this.initialized) {
 
         if (this.planeAnimation.update) {
-          this.planeAnimation.step += 0.05;
-          this.planeAnimation.to = this.planeAnimation.from + this.planeAnimation.step;
-          this.physix.plane.quaternion.setFromAxisAngle(new CANNON.Vec3(1, 0, 0), this.planeAnimation.to);
-          if (this.planeAnimation.to >= 0) {
-            this.planeAnimation.update = false;
-            this.planeAnimation.step = 0.0;
-            this.planeAnimation.to = 0.0;
-            this.isEnabledEvents = true;
-          }
+          this.physix.plane.quaternion.setFromAxisAngle(new CANNON.Vec3(1, 0, 0), this.planeAnimation.from);
         }
 
         this.updatePhysix();
-        this.cannonDebugRenderer.update();
+        // this.cannonDebugRenderer.update();
       }
 
       this.stats.end();
